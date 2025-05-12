@@ -1,3 +1,4 @@
+import sys
 import csv
 import re
 import io
@@ -13,7 +14,7 @@ from ics.grammar.parse import ContentLine  # Required for calendar metadata
 # --- Configuration ---
 CURRENT_YEAR = datetime.now().year
 CSV_URL = os.getenv("SHEET_CSV_URL")
-OUTPUT_DIR = Path("docs")
+OUTPUT_DIR = Path(sys.argv[1] if len(sys.argv) > 1 else "docs")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
 
 # --- Require SHEET_CSV_URL ---
