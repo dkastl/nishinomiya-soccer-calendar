@@ -125,8 +125,8 @@ for team, events in events_by_team.items():
     for date, desc in events:
         event = Event()
         event.name = desc
-        event.begin = date.isoformat()
-        event.duration = timedelta(hours=1)
+        event.begin = date.date()  # Just the date (not datetime)
+        event.make_all_day()
         event.uid = generate_uid(date, team, desc)
         cal.events.add(event)
 
