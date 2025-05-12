@@ -175,4 +175,5 @@ cython_debug/
 
 # Ignore build artifacts
 /site/
-/docs/*.ics
+/docs/
+/data/
