@@ -12,7 +12,7 @@ from collections import defaultdict
 from ics import Calendar, Event
 from ics.grammar.parse import ContentLine
 
-CURRENT_YEAR = datetime.now().year
+# --- Configuration ---
 CSV_URL = os.getenv("SHEET_CSV_URL")
 OUTPUT_DIR = Path(sys.argv[1] if len(sys.argv) > 1 else "docs")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -57,8 +57,13 @@ reader = csv.reader(io.StringIO(decoded))
 rows = [[clean(cell) for cell in row] for row in reader]
 print(f"✅ Loaded {len(rows)} rows")
 
-# --- Detect calendar blocks per row ---
+# --- Detect calendar blocks with dynamic year tracking ---
 blocks_by_row = {}
+month_sequence = []
+year_for_month = {}
+base_year = datetime.now().year
+current_year = base_year
+
 for row_index, row in enumerate(rows):
     col = 0
     blocks = []
@@ -69,6 +74,13 @@ for row_index, row in enumerate(rows):
             except ValueError:
                 col += 1
                 continue
+
+            # Handle year rollover
+            if month_sequence and month < month_sequence[-1]:
+                current_year += 1
+            if month not in year_for_month:
+                year_for_month[month] = current_year
+                month_sequence.append(month)
 
             team_cols = {}
             scan = col + 2
@@ -104,7 +116,8 @@ for row_index, row in enumerate(rows):
         if not re.fullmatch(r"\d{1,2}", day_str):
             continue
         try:
-            date = datetime(CURRENT_YEAR, month, int(day_str))
+            year = year_for_month.get(month, base_year)
+            date = datetime(year, month, int(day_str))
         except ValueError:
             continue
 
@@ -125,7 +138,7 @@ for team, events in events_by_team.items():
     for date, desc in events:
         event = Event()
         event.name = desc
-        event.begin = date.date()  # Just the date (not datetime)
+        event.begin = date.date()
         event.make_all_day()
         event.uid = generate_uid(date, team, desc)
         cal.events.add(event)
