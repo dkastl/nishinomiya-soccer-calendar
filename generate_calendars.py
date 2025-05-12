@@ -9,7 +9,7 @@ import unicodedata
 from datetime import datetime, timedelta
 from pathlib import Path
 from ics import Calendar, Event
-from ics.grammar.parse import ContentLine  # Required for calendar metadata
+from ics.grammar.parse import ContentLine
 
 # --- Configuration ---
 CURRENT_YEAR = datetime.now().year
@@ -30,6 +30,30 @@ def clean(text):
 
 def generate_uid(date, team, content):
     return hashlib.md5(f"{date.isoformat()}-{team}-{content}".encode()).hexdigest()
+
+def generate_index_html(output_dir: Path, teams: dict):
+    template_path = Path("index_template.html")
+    if not template_path.exists():
+        print("⚠️ index_template.html not found. Skipping index generation.")
+        return
+
+    with open(template_path, encoding="utf-8") as f:
+        template = f.read()
+
+    # Build list from teams (team slug and display name)
+    links = [
+        f'<li><a href="{re.sub(r"[^\w]+", "_", team.lower()).strip("_")}.ics">{team}</a></li>'
+        for team in sorted(teams)
+    ]
+    html_list = "<ul>\n" + "\n".join(links) + "\n</ul>"
+
+    result = template.replace("<!-- CALENDAR_LIST -->", html_list)
+    output_path = output_dir / "index.html"
+
+    with open(output_path, "w", encoding="utf-8") as f:
+        f.write(result)
+
+    print(f"📝 index.html written to {output_path}")
 
 # --- Fetch CSV ---
 print(f"🔄 Downloading schedule from:\n{CSV_URL}")
@@ -130,4 +154,7 @@ for team, events in events_by_team.items():
 
     print(f"✅ {team}: {len(events)} events → {ics_path.name}")
 
-print("🎉 All calendars generated.")
+# --- Generate index.html ---
+generate_index_html(OUTPUT_DIR, events_by_team)
+
+print("🎉 All calendars and index.html generated.")
