@@ -6,13 +6,15 @@ import os
 import hashlib
 import requests
 import unicodedata
-from datetime import datetime, timedelta, time
+from datetime import datetime, timedelta
 from pathlib import Path
 from collections import defaultdict
+from zoneinfo import ZoneInfo
 from ics import Calendar, Event
 from ics.grammar.parse import ContentLine
 
 # --- Configuration ---
+TIMEZONE = ZoneInfo("Asia/Tokyo")
 CSV_URL = os.getenv("SHEET_CSV_URL")
 OUTPUT_DIR = Path(sys.argv[1] if len(sys.argv) > 1 else "docs")
 OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -97,7 +99,6 @@ for row_index, row in enumerate(rows):
                 col += 1
                 continue
 
-            # Handle year rollover
             if month_sequence and month < month_sequence[-1]:
                 current_year += 1
             if month not in year_for_month:
@@ -155,7 +156,7 @@ print(f"\n📊 Found {len(events_by_team)} teams and {event_count} total events.
 for team, events in events_by_team.items():
     cal = Calendar()
     cal.extra.append(ContentLine(name="X-WR-CALNAME", value=team))
-    cal.extra.append(ContentLine(name="X-WR-TIMEZONE", value="Asia/Tokyo"))
+    cal.extra.append(ContentLine(name="X-WR-TIMEZONE", value=TIMEZONE.key))
 
     for date, desc in events:
         event = Event()
@@ -163,8 +164,8 @@ for team, events in events_by_team.items():
         start_str, end_str = extract_time_range(desc)
         if start_str and end_str:
             try:
-                start_dt = datetime.combine(date.date(), datetime.strptime(start_str, "%H:%M").time())
-                end_dt = datetime.combine(date.date(), datetime.strptime(end_str, "%H:%M").time())
+                start_dt = datetime.combine(date.date(), datetime.strptime(start_str, "%H:%M").time(), tzinfo=TIMEZONE)
+                end_dt = datetime.combine(date.date(), datetime.strptime(end_str, "%H:%M").time(), tzinfo=TIMEZONE)
                 event.begin = start_dt
                 event.end = end_dt
             except ValueError:
