@@ -37,15 +37,12 @@ def normalize_time_string(s):
 
 def extract_time_range(text):
     text = normalize_time_string(text)
-
     match = re.search(r"\(?(\d{1,2}:\d{2})\s*[-]\s*(\d{1,2}:\d{2})\)?", text)
     if match:
         return match.group(1), match.group(2)
-
     match = re.search(r"\(?(\d{1,2})\s*[-]\s*(\d{1,2})\)?", text)
     if match:
         return f"{int(match.group(1)):02d}:00", f"{int(match.group(2)):02d}:00"
-
     return None, None
 
 def generate_uid(date, team, content):
