@@ -6,7 +6,7 @@ import os
 import hashlib
 import requests
 import unicodedata
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time
 from pathlib import Path
 from collections import defaultdict
 from ics import Calendar, Event
@@ -21,10 +21,32 @@ if not CSV_URL:
     print("❌ SHEET_CSV_URL environment variable is not set.")
     exit(1)
 
+# --- Helpers ---
 def clean(text):
     if not isinstance(text, str):
         text = str(text)
     return re.sub(r"\s+", " ", unicodedata.normalize("NFKC", text.strip()))
+
+def normalize_time_string(s):
+    s = unicodedata.normalize("NFKC", s)
+    s = re.sub(r"[〜～–—~]", "-", s)
+    s = s.replace("：", ":")
+    return s
+
+def extract_time_range(text):
+    text = normalize_time_string(text)
+
+    # Match (13:45-17:00) or similar
+    match = re.search(r"\(?(\d{1,2}:\d{2})\s*[-]\s*(\d{1,2}:\d{2})\)?", text)
+    if match:
+        return match.group(1), match.group(2)
+
+    # Match hour-only like 17-19 or 9-12
+    match = re.search(r"\(?(\d{1,2})\s*[-]\s*(\d{1,2})\)?", text)
+    if match:
+        return f"{int(match.group(1)):02d}:00", f"{int(match.group(2)):02d}:00"
+
+    return None, None
 
 def generate_uid(date, team, content):
     return hashlib.md5(f"{date.isoformat()}-{team}-{content}".encode()).hexdigest()
@@ -138,8 +160,20 @@ for team, events in events_by_team.items():
     for date, desc in events:
         event = Event()
         event.name = desc
-        event.begin = date.date()
-        event.make_all_day()
+        start_str, end_str = extract_time_range(desc)
+        if start_str and end_str:
+            try:
+                start_dt = datetime.combine(date.date(), datetime.strptime(start_str, "%H:%M").time())
+                end_dt = datetime.combine(date.date(), datetime.strptime(end_str, "%H:%M").time())
+                event.begin = start_dt
+                event.end = end_dt
+            except ValueError:
+                event.begin = date.date()
+                event.make_all_day()
+        else:
+            event.begin = date.date()
+            event.make_all_day()
+
         event.uid = generate_uid(date, team, desc)
         cal.events.add(event)
 
