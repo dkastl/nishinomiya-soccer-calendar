@@ -38,12 +38,10 @@ def normalize_time_string(s):
 def extract_time_range(text):
     text = normalize_time_string(text)
 
-    # Match (13:45-17:00) or similar
     match = re.search(r"\(?(\d{1,2}:\d{2})\s*[-]\s*(\d{1,2}:\d{2})\)?", text)
     if match:
         return match.group(1), match.group(2)
 
-    # Match hour-only like 17-19 or 9-12
     match = re.search(r"\(?(\d{1,2})\s*[-]\s*(\d{1,2})\)?", text)
     if match:
         return f"{int(match.group(1)):02d}:00", f"{int(match.group(2)):02d}:00"
@@ -53,13 +51,18 @@ def extract_time_range(text):
 def generate_uid(date, team, content):
     return hashlib.md5(f"{date.isoformat()}-{team}-{content}".encode()).hexdigest()
 
+def slugify(text, fallback_index=None):
+    text_ascii = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+    slug = re.sub(r"[^\w]+", "_", text_ascii.lower()).strip("_")
+    if not slug:
+        slug = f"calendar_{fallback_index}" if fallback_index is not None else "calendar"
+    return slug
+
 def generate_index_html(output_dir: Path, teams: dict):
     output_path = output_dir / "index.html"
     links = [
-        '<li><a href="{}.ics">{}</a></li>'.format(
-            re.sub(r"[^\w]+", "_", team.lower()).strip("_"), team
-        )
-        for team in sorted(teams)
+        f'<li><a href="{slugify(team, i + 1)}.ics">{team}</a></li>'
+        for i, team in enumerate(sorted(teams))
     ]
     html_list = "<ul>\n" + "\n".join(links) + "\n</ul>"
     with open(output_path, "w", encoding="utf-8") as f:
@@ -153,7 +156,7 @@ for row_index, row in enumerate(rows):
 
 # --- Write ICS files ---
 print(f"\n📊 Found {len(events_by_team)} teams and {event_count} total events.")
-for team, events in events_by_team.items():
+for i, (team, events) in enumerate(events_by_team.items()):
     cal = Calendar()
     cal.extra.append(ContentLine(name="X-WR-CALNAME", value=team))
     cal.extra.append(ContentLine(name="X-WR-TIMEZONE", value=TIMEZONE.key))
@@ -178,7 +181,7 @@ for team, events in events_by_team.items():
         event.uid = generate_uid(date, team, desc)
         cal.events.add(event)
 
-    team_slug = re.sub(r"[^\w]+", "_", team.lower()).strip("_")
+    team_slug = slugify(team, fallback_index=i + 1)
     ics_path = OUTPUT_DIR / f"{team_slug}.ics"
     with open(ics_path, "w", encoding="utf-8") as f:
         f.writelines(cal)
