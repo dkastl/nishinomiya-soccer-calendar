@@ -58,8 +58,8 @@ def slugify(text, fallback_index=None):
 def generate_index_html(output_dir: Path, teams: dict):
     output_path = output_dir / "index.html"
     links = [
-        f'<li><a href="{slugify(team, i + 1)}.ics">{team}</a></li>'
-        for i, team in enumerate(sorted(teams))
+        f'<li><a href="{slugify(team, i + 1)}.ics">{team} ({len(events)} events)</a></li>'
+        for i, (team, events) in enumerate(sorted(teams.items()))
     ]
     html_list = "<ul>\n" + "\n".join(links) + "\n</ul>"
     generation_date = datetime.now(TIMEZONE).strftime("%Y-%m-%d %H:%M:%S")
