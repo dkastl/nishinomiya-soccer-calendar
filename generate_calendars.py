@@ -62,11 +62,17 @@ def generate_index_html(output_dir: Path, teams: dict):
         for i, team in enumerate(sorted(teams))
     ]
     html_list = "<ul>\n" + "\n".join(links) + "\n</ul>"
-    generation_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    generation_date = datetime.now(TIMEZONE).strftime("%Y-%m-%d %H:%M:%S")
+    instructions = (
+        "<p>You can use the URL of any calendar file below to subscribe in calendar apps like Google Calendar.<br>"
+        "For Google Calendar: Go to <b>Other calendars</b> → <b>Add by URL</b> and paste the link to the .ics file.</p>"
+    )
     with open(output_path, "w", encoding="utf-8") as f:
         f.write(
-            f"<html><body><h1>Team Calendars</h1>\n{html_list}\n"
-            f"<p>Generated on: {generation_date}</p>\n"
+            f"<html><body><h1>Team Calendars</h1>\n"
+            f"{instructions}\n"
+            f"{html_list}\n"
+            f"<p>Generated on: {generation_date} JST</p>\n"
             "</body></html>"
         )
     print(f"📝 index.html written to {output_path}")
