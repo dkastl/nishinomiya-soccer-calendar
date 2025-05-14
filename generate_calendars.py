@@ -62,8 +62,13 @@ def generate_index_html(output_dir: Path, teams: dict):
         for i, team in enumerate(sorted(teams))
     ]
     html_list = "<ul>\n" + "\n".join(links) + "\n</ul>"
+    generation_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     with open(output_path, "w", encoding="utf-8") as f:
-        f.write(f"<html><body><h1>Team Calendars</h1>\n{html_list}\n</body></html>")
+        f.write(
+            f"<html><body><h1>Team Calendars</h1>\n{html_list}\n"
+            f"<p>Generated on: {generation_date}</p>\n"
+            "</body></html>"
+        )
     print(f"📝 index.html written to {output_path}")
 
 # --- Fetch CSV ---
